@@ -1,13 +1,13 @@
 <?php
 /**
 ---------------------------------------------------------------------------------------------------------------------------
-Watermark images for Wordpress (.htaccess based) v1.02
+Watermark images for Wordpress (.htaccess based) v1.03
  * @author Javier Gutiérrez Chamorro (Guti) - https://www.javiergutierrezchamorro.com
  * @link https://www.javiergutierrezchamorro.com
  * @copyright © Copyright 2021
  * @package watermark-images-for-wordpress-htaccess
  * @license LGPL
- * @version 1.02
+ * @version 1.03
 ---------------------------------------------------------------------------------------------------------------------------
 */
 
@@ -35,8 +35,9 @@ const KI_SCALE_JPEG_WIDTH = 1600;				//JPEG image will be reduced to that width 
 // -------------------------------------------------------------------------------------------------------------------------------------------------------------
 $sSource = getcwd() . '/' . @$_GET['src'];
 
+
 //We only support JPEG files
-if ((!@empty($_GET['src'])) && ((strpos(strtolower($sSource), '.jpg') !== false) || (strpos(strtolower($sSource), '.jpeg') !== false)))
+if ((!@empty($_GET['src'])) && ((strpos(strtolower($sSource), '.jpg') !== false) || (strpos(strtolower($sSource), '.jpeg') !== false)) && (strpos($_SERVER['REQUEST_URI'], 'nowatermark') === false))
 {
 	//Source image should exist
 	if (file_exists($sSource))
@@ -112,6 +113,7 @@ if ((!@empty($_GET['src'])) && ((strpos(strtolower($sSource), '.jpg') !== false)
 //Not a JPEG so serve the original image
 else
 {
+	header('content-type: image/jpeg');
 	readfile($sSource);
 }
 
