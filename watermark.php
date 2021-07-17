@@ -1,13 +1,13 @@
 <?php
 /**
 ---------------------------------------------------------------------------------------------------------------------------
-Watermark images for Wordpress (.htaccess based) v1.01
+Watermark images for Wordpress (.htaccess based) v1.02
  * @author Javier Gutiérrez Chamorro (Guti) - https://www.javiergutierrezchamorro.com
  * @link https://www.javiergutierrezchamorro.com
  * @copyright © Copyright 2021
  * @package watermark-images-for-wordpress-htaccess
  * @license LGPL
- * @version 1.01
+ * @version 1.02
 ---------------------------------------------------------------------------------------------------------------------------
 */
 
@@ -26,10 +26,10 @@ declare(strict_types = 1);
 
 
 // -------------------------------------------------------------------------------------------------------------------------------------------------------------
-define ('KI_MIN_JPEG_DIMENSIONS', 100*1024);	//Minimum JPEG file size in order to be watermarked
-define ('KI_MIN_JPEG_WIDTH', 1024);				//Minimum JPEG image width in order to be watermarked
-define ('KI_MIN_JPEG_HEIGHT', 768);				//Minimum JPEG image width in order to be watermarked
-define ('KI_SCALE_JPEG_WIDTH', 1600);			//JPEG image will be reduced to that width if it is wider
+const KI_MIN_JPEG_DIMENSIONS =	100*1024;		//Minimum JPEG file size in order to be watermarked
+const KI_MIN_JPEG_WIDTH = 1024;					//Minimum JPEG image width in order to be watermarked
+const KI_MIN_JPEG_HEIGHT = 768;					//Minimum JPEG image width in order to be watermarked
+const KI_SCALE_JPEG_WIDTH = 1600;				//JPEG image will be reduced to that width if it is wider
 
 
 // -------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -41,10 +41,11 @@ if ((!@empty($_GET['src'])) && ((strpos(strtolower($sSource), '.jpg') !== false)
 	//Source image should exist
 	if (file_exists($sSource))
 	{
-		//PHP getimagesize is slow because it reads the whole image. We will only watermark big images
+		//PHP getimagesize is slow because it reads the whole image. We will only watermark big images which initially is a faster check
 		if (filesize($sSource) > KI_MIN_JPEG_DIMENSIONS)
 		{
 			$aSourceDim = @getjpegsize($sSource);
+			//Now we know it is big enough we proceed checking the image dimensions
 			if (($aSourceDim[0] >= KI_MIN_JPEG_WIDTH) || ($aSourceDim[1] >= KI_MIN_JPEG_HEIGHT))
 			{
 				$oImage = @imagecreatefromjpeg($sSource);
