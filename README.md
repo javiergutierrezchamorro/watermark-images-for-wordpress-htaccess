@@ -1,4 +1,4 @@
-#Watermark images for Wordpress (.htaccess based)
+# Watermark images for Wordpress (.htaccess based)
 By Javier Gutiérrez Chamorro (Guti) - https://www.javiergutierrezchamorro.com
 
 
@@ -10,7 +10,7 @@ This is a simple PHP script with a .htaccess that enables watermarking images on
 There is no related plugin nor admin panel. To uninstall simply remove the supplied 3 files from your folder. If you want to change any option you can take a look at the constants defined in watermark.php.
 
 
-##How does it work?
+## How does it work?
 The .htaccess file intercepts all .jpg/.jpeg files that are requested. Those files will be passed to watermark.php, which will do the following:
 
 1. If image is more KI_MIN_JPEG_DIMENSIONS (default to 100 KB.) and it is larger than KI_MIN_JPEG_WIDTH, KI_MIN_JPEG_HEIGHT (default 1024x768), the watermark will be applied.
