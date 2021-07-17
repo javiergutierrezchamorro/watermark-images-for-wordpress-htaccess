@@ -1,13 +1,13 @@
 <?php
 /**
 ---------------------------------------------------------------------------------------------------------------------------
-Watermark images for Wordpress (.htaccess based) v1.00
+Watermark images for Wordpress (.htaccess based) v1.01
  * @author Javier Gutiérrez Chamorro (Guti) - https://www.javiergutierrezchamorro.com
  * @link https://www.javiergutierrezchamorro.com
  * @copyright © Copyright 2021
  * @package watermark-images-for-wordpress-htaccess
  * @license LGPL
- * @version 1.00
+ * @version 1.01
 ---------------------------------------------------------------------------------------------------------------------------
 */
 
@@ -88,14 +88,18 @@ if ((!@empty($_GET['src'])) && ((strpos(strtolower($sSource), '.jpg') !== false)
 				@imagedestroy($oWatermark);
 				@imagedestroy($oImage);
 			}
-			//Less than 100 KB JPEG so redirect to original file
+			//Less tan 1024x768 JPEG so redirect to original file
 			else
 			{
+				header('content-type: image/jpeg');
+				readfile($sSource);
 			}
 		}
-		//Less tan 1024x768 JPEG so redirect to original file
+		//Less than 100 KB JPEG so redirect to original file
 		else
 		{
+			header('content-type: image/jpeg');
+			readfile($sSource);
 		}
 	}
 	//Image not found
@@ -107,6 +111,7 @@ if ((!@empty($_GET['src'])) && ((strpos(strtolower($sSource), '.jpg') !== false)
 //Not a JPEG so serve the original image
 else
 {
+	readfile($sSource);
 }
 
 
