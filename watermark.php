@@ -125,6 +125,13 @@ else
 // -------------------------------------------------------------------------------------------------------------------------------------------------------------
 function ServeFile($psFile, $piSize = 0)
 {
+	header('Content-Type: image/jpeg');
+	if ($piSize === 0)
+	{
+		$piSize = filesize($psFile);
+	}
+	header('Content-Length: ' . $piSize);
+	
 	//Use faster X-Sendfile if available
 	if ((function_exists('apache_get_modules')) && (in_array('mod_xsendfile', apache_get_modules())))
 	{
@@ -132,12 +139,6 @@ function ServeFile($psFile, $piSize = 0)
 	}
 	else
 	{
-		header('Content-Type: image/jpeg');
-		if ($piSize === 0)
-		{
-			$piSize = filesize($psFile);
-		}
-		header('Content-Length: ' . $piSize);
 		readfile($psFile);
 	}
 }
