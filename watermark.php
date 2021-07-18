@@ -1,13 +1,13 @@
 <?php
 /**
 ---------------------------------------------------------------------------------------------------------------------------
-Watermark images for Wordpress (.htaccess based) v1.04
+Watermark images for Wordpress (.htaccess based) v1.10
  * @author Javier Gutiérrez Chamorro (Guti) - https://www.javiergutierrezchamorro.com
  * @link https://www.javiergutierrezchamorro.com
  * @copyright © Copyright 2021
  * @package watermark-images-for-wordpress-htaccess
  * @license LGPL
- * @version 1.04
+ * @version 1.10
 ---------------------------------------------------------------------------------------------------------------------------
 */
 
@@ -26,7 +26,7 @@ declare(strict_types = 1);
 
 
 // -------------------------------------------------------------------------------------------------------------------------------------------------------------
-const KI_MIN_JPEG_DIMENSIONS =	100*1024;		//Minimum JPEG file size in order to be watermarked
+const KI_MIN_JPEG_SIZE = 100*1024;				//Minimum JPEG file size in order to be watermarked
 const KI_MIN_JPEG_WIDTH = 1024;					//Minimum JPEG image width in order to be watermarked
 const KI_MIN_JPEG_HEIGHT = 768;					//Minimum JPEG image width in order to be watermarked
 const KI_SCALE_JPEG_WIDTH = 1600;				//JPEG image will be reduced to that width if it is wider
@@ -44,7 +44,8 @@ if ((!@empty($_GET['src'])) && ((strpos(strtolower($sSource), '.jpg') !== false)
 	if (file_exists($sSource))
 	{
 		//PHP getimagesize is slow because it reads the whole image. We will only watermark big images which initially is a faster check
-		if (filesize($sSource) > KI_MIN_JPEG_DIMENSIONS)
+		$iSourceSize = filesize($sSource);
+		if ($iSourceSize > KI_MIN_JPEG_SIZE)
 		{
 			$aSourceDim = @getjpegsize($sSource);
 			//If fast getimagesize fails, try use system version
@@ -83,13 +84,13 @@ if ((!@empty($_GET['src'])) && ((strpos(strtolower($sSource), '.jpg') !== false)
 				//Serve webp is supported
 				if (@strpos($_SERVER['HTTP_ACCEPT'], 'image/webp') !== false)
 				{
-					header('content-type: image/webp');
+					header('Content-Type: image/webp');
 					imagewebp($oImage, NULL, 85);
 				}
 				//Fallback to serving interlaced JPEG
 				else
 				{
-					header('content-type: image/jpeg');
+					header('Content-Type: image/jpeg');
 					imageinterlace($oImage);
 					imagejpeg($oImage, NULL, 85);
 				}
@@ -99,15 +100,13 @@ if ((!@empty($_GET['src'])) && ((strpos(strtolower($sSource), '.jpg') !== false)
 			//Less than 1024x768 JPEG so redirect to original file
 			else
 			{
-				header('content-type: image/jpeg');
-				readfile($sSource);
+				ServeFile($sSource, $iSourceSize);
 			}
 		}
 		//Less than 100 KB JPEG so redirect to original file
 		else
 		{
-			header('content-type: image/jpeg');
-			readfile($sSource);
+			ServeFile($sSource, $iSourceSize);
 		}
 	}
 	//Image not found
@@ -119,11 +118,29 @@ if ((!@empty($_GET['src'])) && ((strpos(strtolower($sSource), '.jpg') !== false)
 //Not a JPEG so serve the original image
 else
 {
-	header('content-type: image/jpeg');
-	readfile($sSource);
+	ServeFile($sSource);
 }
 
 
+// -------------------------------------------------------------------------------------------------------------------------------------------------------------
+function ServeFile($psFile, $piSize = 0)
+{
+	//Use faster X-Sendfile if available
+	if ((function_exists('apache_get_modules')) && (in_array('mod_xsendfile', apache_get_modules())))
+	{
+		header('X-Sendfile: ' . $psFile);
+	}
+	else
+	{
+		header('Content-Type: image/jpeg');
+		if ($piSize === 0)
+		{
+			$piSize = filesize($psFile);
+		}
+		header('Content-Length: ' . $piSize);
+		readfile($psFile);
+	}
+}
 
 
 // -------------------------------------------------------------------------------------------------------------------------------------------------------------
