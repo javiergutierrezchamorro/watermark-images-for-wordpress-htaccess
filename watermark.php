@@ -1,13 +1,13 @@
 <?php
 /**
 ---------------------------------------------------------------------------------------------------------------------------
-Watermark images for Wordpress (.htaccess based) v1.03
+Watermark images for Wordpress (.htaccess based) v1.04
  * @author Javier Gutiérrez Chamorro (Guti) - https://www.javiergutierrezchamorro.com
  * @link https://www.javiergutierrezchamorro.com
  * @copyright © Copyright 2021
  * @package watermark-images-for-wordpress-htaccess
  * @license LGPL
- * @version 1.03
+ * @version 1.04
 ---------------------------------------------------------------------------------------------------------------------------
 */
 
@@ -30,6 +30,7 @@ const KI_MIN_JPEG_DIMENSIONS =	100*1024;		//Minimum JPEG file size in order to b
 const KI_MIN_JPEG_WIDTH = 1024;					//Minimum JPEG image width in order to be watermarked
 const KI_MIN_JPEG_HEIGHT = 768;					//Minimum JPEG image width in order to be watermarked
 const KI_SCALE_JPEG_WIDTH = 1600;				//JPEG image will be reduced to that width if it is wider
+const KS_EXCLUDE_PROCESSING = 'nowatermark';	//Substring in URL to exclude processing
 
 
 // -------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -37,7 +38,7 @@ $sSource = getcwd() . '/' . @$_GET['src'];
 
 
 //We only support JPEG files
-if ((!@empty($_GET['src'])) && ((strpos(strtolower($sSource), '.jpg') !== false) || (strpos(strtolower($sSource), '.jpeg') !== false)) && (strpos($_SERVER['REQUEST_URI'], 'nowatermark') === false))
+if ((!@empty($_GET['src'])) && ((strpos(strtolower($sSource), '.jpg') !== false) || (strpos(strtolower($sSource), '.jpeg') !== false)) && (strpos($_SERVER['REQUEST_URI'], KS_EXCLUDE_PROCESSING) === false))
 {
 	//Source image should exist
 	if (file_exists($sSource))
@@ -46,8 +47,13 @@ if ((!@empty($_GET['src'])) && ((strpos(strtolower($sSource), '.jpg') !== false)
 		if (filesize($sSource) > KI_MIN_JPEG_DIMENSIONS)
 		{
 			$aSourceDim = @getjpegsize($sSource);
+			//If fast getimagesize fails, try use system version
+			if (!$aSourceDim)
+			{
+				$aSourceDim = @getimagesize($sSource);
+			}
 			//Now we know it is big enough we proceed checking the image dimensions
-			if (($aSourceDim[0] >= KI_MIN_JPEG_WIDTH) || ($aSourceDim[1] >= KI_MIN_JPEG_HEIGHT))
+			if (($aSourceDim) && ($aSourceDim[0] >= KI_MIN_JPEG_WIDTH) || ($aSourceDim[1] >= KI_MIN_JPEG_HEIGHT))
 			{
 				$oImage = @imagecreatefromjpeg($sSource);
 				//Rescale if too large
@@ -90,7 +96,7 @@ if ((!@empty($_GET['src'])) && ((strpos(strtolower($sSource), '.jpg') !== false)
 				@imagedestroy($oWatermark);
 				@imagedestroy($oImage);
 			}
-			//Less tan 1024x768 JPEG so redirect to original file
+			//Less than 1024x768 JPEG so redirect to original file
 			else
 			{
 				header('content-type: image/jpeg');
