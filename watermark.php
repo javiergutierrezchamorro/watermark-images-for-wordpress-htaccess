@@ -53,7 +53,7 @@ if ((!@empty($_GET['src'])) && ((strpos(strtolower($sSource), '.jpg') !== false)
 				$aSourceDim = @getimagesize($sSource);
 			}
 			//Now we know it is big enough we proceed checking the image dimensions
-			if (($aSourceDim) && ($aSourceDim[0] >= KI_MIN_JPEG_WIDTH) || ($aSourceDim[1] >= KI_MIN_JPEG_HEIGHT))
+			if (($aSourceDim) && (($aSourceDim[0] >= KI_MIN_JPEG_WIDTH) || ($aSourceDim[1] >= KI_MIN_JPEG_HEIGHT)))
 			{
 				$oImage = @imagecreatefromjpeg($sSource);
 				//Rescale if too large
