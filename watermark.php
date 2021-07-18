@@ -57,7 +57,7 @@ if ((!@empty($_GET['src'])) && ((strpos(strtolower($sSource), '.jpg') !== false)
 			{
 				$oImage = @imagecreatefromjpeg($sSource);
 				//Rescale if too large
-				if (($aSourceDim[0] >= KI_SCALE_JPEG_WIDTH) || ($aSourceDim[1] >= KI_SCALE_JPEG_WIDTH))
+				if (($aSourceDim[0] > KI_SCALE_JPEG_WIDTH) || ($aSourceDim[1] > KI_SCALE_JPEG_WIDTH))
 				{
 					if ($aSourceDim[0] > $aSourceDim[1])
 					{
