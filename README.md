@@ -14,7 +14,7 @@ There is no related wp-plugin to install nor any admin panel. To uninstall simpl
 ## How does it work?
 The .htaccess file intercepts all calls to .jpg/.jpeg files that are requested from inside your wp-content/uploads/* folder (images on outer locations will be not treated). Those images will be passed to watermark.php, which will do the following:
 
-1. If image is more KI_MIN_JPEG_SIZE (default to 100 KB.) and if it is larger than KI_MIN_JPEG_WIDTH or KI_MIN_JPEG_HEIGHT (default 1024x768), the watermark will be applied.
+1. If image is more than 100 KB. (hardcoded in .htaccess) and if it is larger than KI_MIN_JPEG_WIDTH or KI_MIN_JPEG_HEIGHT (default 1024x768), the watermark will be applied.
 1- Appending KS_EXCLUDE_PROCESSING (by default "nowatermark"), processing will be deactivated, and so the original image with no watermark will be served.
 1. Additionally if the image is larger that KI_SCALE_JPEG_WIDTH pixels (default to 1600), it will be downscaled to KI_SCALE_JPEG_WIDTH in order to save bandwidth.
 1. A new on-the-fly image with the watermark added will be served to the browser. If client webbrowser supports WEBP it will used that format, while fallback to regular JPEG if not supported.

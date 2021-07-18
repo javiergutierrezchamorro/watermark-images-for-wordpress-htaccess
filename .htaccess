@@ -1,4 +1,5 @@
 <IfModule mod_rewrite.c>
 	RewriteEngine On
+	RewriteCond expr "filesize('%{REQUEST_FILENAME}') -gt 102400"
 	RewriteRule (^.*\.(jpg|jpeg)$) ./watermark.php?src=$1 [L]
 </IfModule>

@@ -1,13 +1,13 @@
 <?php
 /**
 ---------------------------------------------------------------------------------------------------------------------------
-Watermark images for Wordpress (.htaccess based) v1.10
+Watermark images for Wordpress (.htaccess based) v1.11
  * @author Javier Gutiérrez Chamorro (Guti) - https://www.javiergutierrezchamorro.com
  * @link https://www.javiergutierrezchamorro.com
  * @copyright © Copyright 2021
  * @package watermark-images-for-wordpress-htaccess
  * @license LGPL
- * @version 1.10
+ * @version 1.11
 ---------------------------------------------------------------------------------------------------------------------------
 */
 
@@ -16,6 +16,7 @@ Watermark images for Wordpress (.htaccess based) v1.10
 /*
 <IfModule mod_rewrite.c>
 	RewriteEngine On
+	RewriteCond expr "filesize('%{REQUEST_FILENAME}') -gt 102400"
 	RewriteRule (^.*\.(jpg|jpeg)$) ./watermark.php?src=$1 [L]
 </IfModule>
 */
@@ -26,7 +27,6 @@ declare(strict_types = 1);
 
 
 // -------------------------------------------------------------------------------------------------------------------------------------------------------------
-const KI_MIN_JPEG_SIZE = 100*1024;				//Minimum JPEG file size in order to be watermarked
 const KI_MIN_JPEG_WIDTH = 1024;					//Minimum JPEG image width in order to be watermarked
 const KI_MIN_JPEG_HEIGHT = 768;					//Minimum JPEG image width in order to be watermarked
 const KI_SCALE_JPEG_WIDTH = 1600;				//JPEG image will be reduced to that width if it is wider
@@ -44,66 +44,57 @@ if ((!@empty($_GET['src'])) && ((strpos(strtolower($sSource), '.jpg') !== false)
 	if (file_exists($sSource))
 	{
 		//PHP getimagesize is slow because it reads the whole image. We will only watermark big images which initially is a faster check
-		$iSourceSize = filesize($sSource);
-		if ($iSourceSize > KI_MIN_JPEG_SIZE)
+		$aSourceDim = @getjpegsize($sSource);
+		//If fast getimagesize fails, try use system version
+		if (!$aSourceDim)
 		{
-			$aSourceDim = @getjpegsize($sSource);
-			//If fast getimagesize fails, try use system version
-			if (!$aSourceDim)
+			$aSourceDim = @getimagesize($sSource);
+		}
+		//Now we know it is big enough we proceed checking the image dimensions
+		if (($aSourceDim) && (($aSourceDim[0] >= KI_MIN_JPEG_WIDTH) || ($aSourceDim[1] >= KI_MIN_JPEG_HEIGHT)))
+		{
+			$oImage = @imagecreatefromjpeg($sSource);
+			//Rescale if too large
+			if (($aSourceDim[0] > KI_SCALE_JPEG_WIDTH) || ($aSourceDim[1] > KI_SCALE_JPEG_WIDTH))
 			{
-				$aSourceDim = @getimagesize($sSource);
-			}
-			//Now we know it is big enough we proceed checking the image dimensions
-			if (($aSourceDim) && (($aSourceDim[0] >= KI_MIN_JPEG_WIDTH) || ($aSourceDim[1] >= KI_MIN_JPEG_HEIGHT)))
-			{
-				$oImage = @imagecreatefromjpeg($sSource);
-				//Rescale if too large
-				if (($aSourceDim[0] > KI_SCALE_JPEG_WIDTH) || ($aSourceDim[1] > KI_SCALE_JPEG_WIDTH))
+				if ($aSourceDim[0] > $aSourceDim[1])
 				{
-					if ($aSourceDim[0] > $aSourceDim[1])
-					{
-						$aSourceDim[1] = (int) ($aSourceDim[1] * (KI_SCALE_JPEG_WIDTH / $aSourceDim[0]));
-						$aSourceDim[0] = KI_SCALE_JPEG_WIDTH;
-					}
-					else
-					{
-						$aSourceDim[0] = (int) ($aSourceDim[0] * (1600 / $aSourceDim[1]));
-						$aSourceDim[1] = KI_SCALE_JPEG_WIDTH;
-					}
-					$oScaled = imagescale($oImage, $aSourceDim[0], $aSourceDim[1]);
-					@imagedestroy($oImage);
-					$oImage = $oScaled;
+					$aSourceDim[1] = (int) ($aSourceDim[1] * (KI_SCALE_JPEG_WIDTH / $aSourceDim[0]));
+					$aSourceDim[0] = KI_SCALE_JPEG_WIDTH;
 				}
-				//Watermark the image
-				$oWatermark = imagecreatefrompng('watermark.png');
-				$iWatermarkWidth = imagesx($oWatermark);
-				$iWatermarkHeight = imagesy($oWatermark);
-				$iDestX = $aSourceDim[0] - $iWatermarkWidth;
-				$iDestY = $aSourceDim[1] - $iWatermarkHeight;
-				imagecopymerge($oImage, $oWatermark, $iDestX - 5, $iDestY - 5, 0, 0, $iWatermarkWidth, $iWatermarkHeight, 60);
-				//Serve webp is supported
-				if (@strpos($_SERVER['HTTP_ACCEPT'], 'image/webp') !== false)
-				{
-					header('Content-Type: image/webp');
-					imagewebp($oImage, NULL, 85);
-				}
-				//Fallback to serving interlaced JPEG
 				else
 				{
-					header('Content-Type: image/jpeg');
-					imageinterlace($oImage);
-					imagejpeg($oImage, NULL, 85);
+					$aSourceDim[0] = (int) ($aSourceDim[0] * (1600 / $aSourceDim[1]));
+					$aSourceDim[1] = KI_SCALE_JPEG_WIDTH;
 				}
-				@imagedestroy($oWatermark);
+				$oScaled = imagescale($oImage, $aSourceDim[0], $aSourceDim[1]);
 				@imagedestroy($oImage);
+				$oImage = $oScaled;
 			}
-			//Less than 1024x768 JPEG so redirect to original file
+			//Watermark the image
+			$oWatermark = imagecreatefrompng('watermark.png');
+			$iWatermarkWidth = imagesx($oWatermark);
+			$iWatermarkHeight = imagesy($oWatermark);
+			$iDestX = $aSourceDim[0] - $iWatermarkWidth;
+			$iDestY = $aSourceDim[1] - $iWatermarkHeight;
+			imagecopymerge($oImage, $oWatermark, $iDestX - 5, $iDestY - 5, 0, 0, $iWatermarkWidth, $iWatermarkHeight, 60);
+			//Serve webp is supported
+			if (@strpos($_SERVER['HTTP_ACCEPT'], 'image/webp') !== false)
+			{
+				header('Content-Type: image/webp');
+				imagewebp($oImage, NULL, 85);
+			}
+			//Fallback to serving interlaced JPEG
 			else
 			{
-				ServeFile($sSource, $iSourceSize);
+				header('Content-Type: image/jpeg');
+				imageinterlace($oImage);
+				imagejpeg($oImage, NULL, 85);
 			}
+			@imagedestroy($oWatermark);
+			@imagedestroy($oImage);
 		}
-		//Less than 100 KB JPEG so redirect to original file
+		//Less than 1024x768 JPEG so redirect to original file
 		else
 		{
 			ServeFile($sSource, $iSourceSize);
