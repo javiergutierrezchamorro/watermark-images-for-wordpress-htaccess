@@ -1,13 +1,13 @@
 <?php
 /**
 ---------------------------------------------------------------------------------------------------------------------------
-Watermark images for Wordpress (.htaccess based) v1.11
+Watermark images for Wordpress (.htaccess based) v1.13
  * @author Javier Gutiérrez Chamorro (Guti) - https://www.javiergutierrezchamorro.com
  * @link https://www.javiergutierrezchamorro.com
  * @copyright © Copyright 2021
  * @package watermark-images-for-wordpress-htaccess
  * @license LGPL
- * @version 1.11
+ * @version 1.13
 ---------------------------------------------------------------------------------------------------------------------------
 */
 
@@ -38,7 +38,7 @@ $sSource = getcwd() . '/' . @$_GET['src'];
 
 
 //We only support JPEG files
-if ((!@empty($_GET['src'])) && ((strpos(strtolower($sSource), '.jpg') !== false) || (strpos(strtolower($sSource), '.jpeg') !== false)) && (strpos($_SERVER['REQUEST_URI'], KS_EXCLUDE_PROCESSING) === false))
+if ((isset($_GET['src'])) && ((strpos(strtolower($sSource), '.jpg') !== false) || (strpos(strtolower($sSource), '.jpeg') !== false)) && (strpos($_SERVER['REQUEST_URI'], KS_EXCLUDE_PROCESSING) === false))
 {
 	//Source image should exist
 	if (file_exists($sSource))
@@ -79,7 +79,7 @@ if ((!@empty($_GET['src'])) && ((strpos(strtolower($sSource), '.jpg') !== false)
 			$iDestY = $aSourceDim[1] - $iWatermarkHeight;
 			imagecopymerge($oImage, $oWatermark, $iDestX - 5, $iDestY - 5, 0, 0, $iWatermarkWidth, $iWatermarkHeight, 60);
 			//Serve webp is supported
-			if (@strpos($_SERVER['HTTP_ACCEPT'], 'image/webp') !== false)
+			if ((isset($_SERVER['HTTP_ACCEPT'])) && (strpos($_SERVER['HTTP_ACCEPT'], 'image/webp') !== false))
 			{
 				header('Content-Type: image/webp');
 				imagewebp($oImage, NULL, 85);
@@ -97,7 +97,7 @@ if ((!@empty($_GET['src'])) && ((strpos(strtolower($sSource), '.jpg') !== false)
 		//Less than 1024x768 JPEG so redirect to original file
 		else
 		{
-			ServeFile($sSource, $iSourceSize);
+			ServeFile($sSource);
 		}
 	}
 	//Image not found
@@ -106,7 +106,7 @@ if ((!@empty($_GET['src'])) && ((strpos(strtolower($sSource), '.jpg') !== false)
 		header('HTTP/1.1 404 Not Found');
 	}
 }
-//Not a JPEG so serve the original image
+//Not a JPEG, or no image pecified  so serve the original image
 else
 {
 	ServeFile($sSource);
@@ -114,14 +114,10 @@ else
 
 
 // -------------------------------------------------------------------------------------------------------------------------------------------------------------
-function ServeFile($psFile, $piSize = 0)
+function ServeFile($psFile)
 {
 	header('Content-Type: image/jpeg');
-	if ($piSize === 0)
-	{
-		$piSize = filesize($psFile);
-	}
-	header('Content-Length: ' . $piSize);
+	header('Content-Length: ' . @filesize($psFile));
 	
 	//Use faster X-Sendfile if available
 	if ((function_exists('apache_get_modules')) && (in_array('mod_xsendfile', apache_get_modules())))
@@ -130,7 +126,7 @@ function ServeFile($psFile, $piSize = 0)
 	}
 	else
 	{
-		readfile($psFile);
+		@readfile($psFile);
 	}
 }
 
