@@ -1,13 +1,13 @@
 <?php
 /**
 ---------------------------------------------------------------------------------------------------------------------------
-Watermark images for Wordpress (.htaccess based) v1.13
+Watermark images for Wordpress (.htaccess based) v1.14
  * @author Javier Gutiérrez Chamorro (Guti) - https://www.javiergutierrezchamorro.com
  * @link https://www.javiergutierrezchamorro.com
  * @copyright © Copyright 2021
  * @package watermark-images-for-wordpress-htaccess
  * @license LGPL
- * @version 1.13
+ * @version 1.14
 ---------------------------------------------------------------------------------------------------------------------------
 */
 
@@ -78,8 +78,14 @@ if ((isset($_GET['src'])) && ((strpos(strtolower($sSource), '.jpg') !== false) |
 			$iDestX = $aSourceDim[0] - $iWatermarkWidth;
 			$iDestY = $aSourceDim[1] - $iWatermarkHeight;
 			imagecopymerge($oImage, $oWatermark, $iDestX - 5, $iDestY - 5, 0, 0, $iWatermarkWidth, $iWatermarkHeight, 60);
-			//Serve webp is supported
-			if ((isset($_SERVER['HTTP_ACCEPT'])) && (strpos($_SERVER['HTTP_ACCEPT'], 'image/webp') !== false))
+			//Serve avif if supported by PHP and client browser
+			if ((function_exists('imageavif')) && (isset($_SERVER['HTTP_ACCEPT'])) && (strpos($_SERVER['HTTP_ACCEPT'], 'image/avif') !== false))
+			{
+				header('Content-Type: image/avif');
+				imageavif($oImage, NULL, 85);
+			}
+			//Serve webp if supported by PHP and client browser
+			else if ((function_exists('imagewebp')) && (isset($_SERVER['HTTP_ACCEPT'])) && (strpos($_SERVER['HTTP_ACCEPT'], 'image/webp') !== false))
 			{
 				header('Content-Type: image/webp');
 				imagewebp($oImage, NULL, 85);

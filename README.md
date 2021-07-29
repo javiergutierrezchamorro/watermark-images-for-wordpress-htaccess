@@ -17,7 +17,7 @@ The .htaccess file intercepts all calls to .jpg/.jpeg files that are requested f
 1. If image is more than 100 KB. (hardcoded in .htaccess) and if it is larger than KI_MIN_JPEG_WIDTH or KI_MIN_JPEG_HEIGHT (default 1024x768), the watermark will be applied.
 1- Appending KS_EXCLUDE_PROCESSING (by default "nowatermark"), processing will be deactivated, and so the original image with no watermark will be served.
 1. Additionally if the image is larger that KI_SCALE_JPEG_WIDTH pixels (default to 1600), it will be downscaled to KI_SCALE_JPEG_WIDTH in order to save bandwidth.
-1. A new on-the-fly image with the watermark added will be served to the browser. If client webbrowser supports WEBP it will used that format, while fallback to regular JPEG if not supported.
+1. A new on-the-fly image with the watermark added will be served to the browser. If client webbrowser supports WEBP it will used that format, while fallback to regular JPEG if not supported. If you are running PHP 8.1 with AVIF support, this type will be used too
 
 Original images are never modified so you will always have them on your wp-content/uploads/ folder. The conversion is done on-demand, so lots of care has been put in making it working fast. It includes its own implementation of getimagesize and uses mod_xsendfile/X-Sendfile if available.
 
