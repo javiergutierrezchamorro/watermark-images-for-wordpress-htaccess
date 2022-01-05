@@ -1,13 +1,13 @@
 <?php
 /**
 ---------------------------------------------------------------------------------------------------------------------------
-Watermark images for WordPress (.htaccess based) v2.00
+Watermark images for WordPress (.htaccess based) v2.01
  * @author Javier Gutiérrez Chamorro (Guti) - https://www.javiergutierrezchamorro.com
  * @link https://www.javiergutierrezchamorro.com
  * @copyright © Copyright 2021-2022
  * @package watermark-images-for-wordpress-htaccess
  * @license LGPL
- * @version 2.00
+ * @version 2.01
 ---------------------------------------------------------------------------------------------------------------------------
 */
 
@@ -27,12 +27,12 @@ declare(strict_types = 1);
 
 
 // -------------------------------------------------------------------------------------------------------------------------------------------------------------
-const KI_MIN_JPEG_WIDTH = 1024;					//Minimum JPEG image width in order to be watermarked
-const KI_MIN_JPEG_HEIGHT = 768;					//Minimum JPEG image width in order to be watermarked
-const KI_SCALE_JPEG_WIDTH = 1600;				//JPEG image will be reduced to that width if it is wider
+const KI_MIN_JPEG_WIDTH = 800;					//Minimum JPEG image width in order to be watermarked
+const KI_MIN_JPEG_HEIGHT = 600;					//Minimum JPEG image width in order to be watermarked
+const KI_SCALE_JPEG_WIDTH = 1200;				//JPEG image will be reduced to that width if it is wider
 const KI_MIN_PNG_WIDTH = 800;					//Minimum PNG image width in order to be watermarked
 const KI_MIN_PNG_HEIGHT = 600;					//Minimum JPEG image width in order to be watermarked
-const KI_SCALE_PNG_WIDTH = 1600;				//PNG image will be reduced to that width if it is wider
+const KI_SCALE_PNG_WIDTH = 1200;				//PNG image will be reduced to that width if it is wider
 const KS_EXCLUDE_PROCESSING = 'nowatermark';	//Substring in URL to exclude processing
 
 
