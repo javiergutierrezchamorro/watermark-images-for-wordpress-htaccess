@@ -1,13 +1,13 @@
 <?php
 /**
 ---------------------------------------------------------------------------------------------------------------------------
-Watermark images for WordPress (.htaccess based) v2.01
+Watermark images for WordPress (.htaccess based) v2.02
  * @author Javier Gutiérrez Chamorro (Guti) - https://www.javiergutierrezchamorro.com
  * @link https://www.javiergutierrezchamorro.com
  * @copyright © Copyright 2021-2022
  * @package watermark-images-for-wordpress-htaccess
  * @license LGPL
- * @version 2.01
+ * @version 2.02
 ---------------------------------------------------------------------------------------------------------------------------
 */
 
@@ -70,7 +70,7 @@ if ((isset($_GET['src'])) && ((strpos(strtolower($sSource), '.jpg') !== false) |
 					}
 					else
 					{
-						$aSourceDim[0] = (int)($aSourceDim[0] * (1600 / $aSourceDim[1]));
+						$aSourceDim[0] = (int)($aSourceDim[0] * (KI_SCALE_JPEG_WIDTH / $aSourceDim[1]));
 						$aSourceDim[1] = KI_SCALE_JPEG_WIDTH;
 					}
 					$oScaled = imagescale($oImage, $aSourceDim[0], $aSourceDim[1]);
@@ -131,7 +131,7 @@ if ((isset($_GET['src'])) && ((strpos(strtolower($sSource), '.jpg') !== false) |
 					}
 					else
 					{
-						$aSourceDim[0] = (int)($aSourceDim[0] * (1600 / $aSourceDim[1]));
+						$aSourceDim[0] = (int)($aSourceDim[0] * (KI_SCALE_PNG_WIDTH / $aSourceDim[1]));
 						$aSourceDim[1] = KI_SCALE_PNG_WIDTH;
 					}
 					$oScaled = imagescale($oImage, $aSourceDim[0], $aSourceDim[1]);
