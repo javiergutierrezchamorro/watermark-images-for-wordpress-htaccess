@@ -7,7 +7,7 @@ Watermark images for WordPress (.htaccess based) v2.02
  * @copyright © Copyright 2021-2022
  * @package watermark-images-for-wordpress-htaccess
  * @license LGPL
- * @version 2.10
+ * @version 2.11
 ---------------------------------------------------------------------------------------------------------------------------
 */
 
@@ -98,13 +98,13 @@ if ((isset($_GET['src'])) && ((strpos(strtolower($sSource), '.jpg') !== false) |
 				if ((imagetypes() & IMG_AVIF) && (isset($_SERVER['HTTP_ACCEPT'])) && (strpos($_SERVER['HTTP_ACCEPT'], 'image/avif') !== false))
 				{
 					header('Content-Type: image/avif');
-					imageavif($oImage, NULL, 85);
+					imageavif($oImage, NULL, 70, 9);
 				}
 				//Serve webp if supported by PHP and client browser
 				else if ((imagetypes() & IMG_WEBP) && (isset($_SERVER['HTTP_ACCEPT'])) && (strpos($_SERVER['HTTP_ACCEPT'], 'image/webp') !== false))
 				{
 					header('Content-Type: image/webp');
-					imagewebp($oImage, NULL, 85);
+					imagewebp($oImage, NULL, 80);
 				}
 				//Fallback to serving interlaced JPEG
 				else
