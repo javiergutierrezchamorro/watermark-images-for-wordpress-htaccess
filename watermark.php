@@ -1,13 +1,13 @@
 <?php
 /**
 ---------------------------------------------------------------------------------------------------------------------------
-Watermark images for WordPress (.htaccess based) v2.12
+Watermark images for WordPress (.htaccess based) v2.14
  * @author Javier Gutiérrez Chamorro (Guti) - https://www.javiergutierrezchamorro.com
  * @link https://www.javiergutierrezchamorro.com
  * @copyright © Copyright 2021-2022
  * @package watermark-images-for-wordpress-htaccess
  * @license LGPL
- * @version 2.12
+ * @version 2.14
 ---------------------------------------------------------------------------------------------------------------------------
 */
 
@@ -171,13 +171,16 @@ if ((isset($_GET['src'])) && ((strpos(strtolower($sSource), '.jpg') !== false) |
 				else if ((imagetypes() & IMG_WEBP) && (isset($_SERVER['HTTP_ACCEPT'])) && (strpos($_SERVER['HTTP_ACCEPT'], 'image/webp') !== false))
 				{
 					header('Content-Type: image/webp');
+					imagepalettetotruecolor($oImage);
+					imagealphablending($oImage, true);
+					imagesavealpha($oImage, true);
 					imagewebp($oImage, NULL, 85);
 				}
 				//Fallback to serving PNG
 				else
 				{
 					header('Content-Type: image/png');
-					imagepng($oImage, NULL, 9, PNG_ALL_FILTERS );
+					imagepng($oImage, NULL, 9, PNG_ALL_FILTERS);
 				}
 				@imagedestroy($oWatermark);
 				@imagedestroy($oImage);
