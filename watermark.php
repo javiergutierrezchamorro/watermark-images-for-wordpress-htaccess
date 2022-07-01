@@ -1,13 +1,13 @@
 <?php
 /**
 ---------------------------------------------------------------------------------------------------------------------------
-Watermark images for WordPress (.htaccess based) v2.02
+Watermark images for WordPress (.htaccess based) v2.12
  * @author Javier Gutiérrez Chamorro (Guti) - https://www.javiergutierrezchamorro.com
  * @link https://www.javiergutierrezchamorro.com
  * @copyright © Copyright 2021-2022
  * @package watermark-images-for-wordpress-htaccess
  * @license LGPL
- * @version 2.11
+ * @version 2.12
 ---------------------------------------------------------------------------------------------------------------------------
 */
 
@@ -61,13 +61,13 @@ if ((isset($_GET['src'])) && ((strpos(strtolower($sSource), '.jpg') !== false) |
 		{
 			//PHP getimagesize is slow because it reads the whole image. We will only watermark big images which initially is a faster check
 			$aSourceDim = @getjpegsize($sSource);
-			//If fast getimagesize fails, try use system version
+			//If fast getimagesize fails, try to use system version
 			if (!$aSourceDim)
 			{
 				$aSourceDim = @getimagesize($sSource);
 			}
 			//Now we know it is big enough we proceed checking the image dimensions
-			if (($aSourceDim) && (($aSourceDim[0] >= KI_MIN_JPEG_WIDTH) || ($aSourceDim[1] >= KI_MIN_JPEG_HEIGHT)))
+			if (($aSourceDim) && (($aSourceDim[0] >= KI_MIN_JPEG_WIDTH) || ($aSourceDim[1] >= KI_MIN_JPEG_HEIGHT)) && ($aSourceDim[2] === IMAGETYPE_JPEG))
 			{
 				$oImage = @imagecreatefromjpeg($sSource);
 				//Rescale if too large
@@ -128,13 +128,13 @@ if ((isset($_GET['src'])) && ((strpos(strtolower($sSource), '.jpg') !== false) |
 		{
 			//PHP getimagesize is slow because it reads the whole image. We will only watermark big images which initially is a faster check
 			$aSourceDim = @getpngsize($sSource);
-			//If fast getimagesize fails, try use system version
+			//If fast getimagesize fails, try to use system version
 			if (!$aSourceDim)
 			{
 				$aSourceDim = @getimagesize($sSource);
 			}
 			//Now we know it is big enough we proceed checking the image dimensions
-			if (($aSourceDim) && (($aSourceDim[0] >= KI_MIN_PNG_WIDTH) || ($aSourceDim[1] >= KI_MIN_PNG_HEIGHT)))
+			if (($aSourceDim) && (($aSourceDim[0] >= KI_MIN_JPEG_WIDTH) || ($aSourceDim[1] >= KI_MIN_JPEG_HEIGHT)) && ($aSourceDim[2] === IMAGETYPE_PNG))
 			{
 				$oImage = @imagecreatefrompng($sSource);
 				//Rescale if too large
@@ -254,7 +254,7 @@ function getjpegsize($img_loc)
 							$unpacked = $unpacked[1];
 							$height = hexdec($unpacked[6] . $unpacked[7] . $unpacked[8] . $unpacked[9]);
 							$width = hexdec($unpacked[10] . $unpacked[11] . $unpacked[12] . $unpacked[13]);
-							return array($width, $height);
+							return(array($width, $height, IMAGETYPE_JPEG));
 						}
 						else
 						{
@@ -293,7 +293,7 @@ function getpngsize($img_loc)
 				$width  = hexdec($width[1]);
 				$height = unpack('H*', $new_block[20] . $new_block[21] . $new_block[22] . $new_block[23]);
 				$height  = hexdec($height[1]);
-				return(array($width, $height));
+				return(array($width, $height, IMAGETYPE_PNG));
 			}
 		}
 	}
