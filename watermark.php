@@ -1,13 +1,13 @@
 <?php
 /**
 ---------------------------------------------------------------------------------------------------------------------------
-Watermark images for WordPress (.htaccess based) v2.14
+Watermark images for WordPress (.htaccess based) v2.15
  * @author Javier Gutiérrez Chamorro (Guti) - https://www.javiergutierrezchamorro.com
  * @link https://www.javiergutierrezchamorro.com
  * @copyright © Copyright 2021-2022
  * @package watermark-images-for-wordpress-htaccess
  * @license LGPL
- * @version 2.14
+ * @version 2.15
 ---------------------------------------------------------------------------------------------------------------------------
 */
 
@@ -134,7 +134,7 @@ if ((isset($_GET['src'])) && ((strpos(strtolower($sSource), '.jpg') !== false) |
 				$aSourceDim = @getimagesize($sSource);
 			}
 			//Now we know it is big enough we proceed checking the image dimensions
-			if (($aSourceDim) && (($aSourceDim[0] >= KI_MIN_JPEG_WIDTH) || ($aSourceDim[1] >= KI_MIN_JPEG_HEIGHT)) && ($aSourceDim[2] === IMAGETYPE_PNG))
+			if (($aSourceDim) && (($aSourceDim[0] >= KI_MIN_PNG_WIDTH) || ($aSourceDim[1] >= KI_MIN_PNG_HEIGHT)) && ($aSourceDim[2] === IMAGETYPE_PNG))
 			{
 				$oImage = @imagecreatefrompng($sSource);
 				//Rescale if too large
