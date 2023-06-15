@@ -7,7 +7,7 @@ Watermark images for WordPress (.htaccess based) v2.15
  * @copyright © Copyright 2021-2022
  * @package watermark-images-for-wordpress-htaccess
  * @license LGPL
- * @version 2.15
+ * @version 2.16
 ---------------------------------------------------------------------------------------------------------------------------
 */
 
@@ -47,11 +47,13 @@ const KS_EXCLUDE_PROCESSING = 'nowatermark';	//Substring in URL to exclude proce
 
 
 // -------------------------------------------------------------------------------------------------------------------------------------------------------------
-$sSource = getcwd() . '/' . @$_GET['src'];
+$sGetSrc = @filter_var($_GET['src'], FILTER_SANITIZE_STRING);
+$sGetRequestUrl = @filter_var($_SERVER['REQUEST_URI'], FILTER_SANITIZE_STRING);
+$sSource = getcwd() . '/' . $sGetSrc;
 
 
 //We only support JPEG AND PNG files
-if ((isset($_GET['src'])) && ((strpos(strtolower($sSource), '.jpg') !== false) || (strpos(strtolower($sSource), '.jpeg') !== false) || (strpos(strtolower($sSource), '.png') !== false)) && (strpos($_SERVER['REQUEST_URI'], KS_EXCLUDE_PROCESSING) === false))
+if ((isset($sGetSrc)) && ((strpos(strtolower($sSource), '.jpg') !== false) || (strpos(strtolower($sSource), '.jpeg') !== false) || (strpos(strtolower($sSource), '.png') !== false)) && (strpos($sGetRequestUrl, KS_EXCLUDE_PROCESSING) === false))
 {
 	//Source image should exist
 	if (file_exists($sSource))
@@ -95,13 +97,13 @@ if ((isset($_GET['src'])) && ((strpos(strtolower($sSource), '.jpg') !== false) |
 				$iDestY = $aSourceDim[1] - $iWatermarkHeight;
 				imagecopymerge($oImage, $oWatermark, $iDestX - 5, $iDestY - 5, 0, 0, $iWatermarkWidth, $iWatermarkHeight, 60);
 				//Serve avif if supported by PHP and client browser
-				if ((imagetypes() & IMG_AVIF) && (isset($_SERVER['HTTP_ACCEPT'])) && (strpos($_SERVER['HTTP_ACCEPT'], 'image/avif') !== false))
+				if ((imagetypes() & IMG_AVIF) && (isset($sServerHttpAccept)) && (strpos($sServerHttpAccept, 'image/avif') !== false))
 				{
 					header('Content-Type: image/avif');
 					imageavif($oImage, NULL, 70, 9);
 				}
 				//Serve webp if supported by PHP and client browser
-				else if ((imagetypes() & IMG_WEBP) && (isset($_SERVER['HTTP_ACCEPT'])) && (strpos($_SERVER['HTTP_ACCEPT'], 'image/webp') !== false))
+				else if ((imagetypes() & IMG_WEBP) && (isset($sServerHttpAccept)) && (strpos($sServerHttpAccept, 'image/webp') !== false))
 				{
 					header('Content-Type: image/webp');
 					imagewebp($oImage, NULL, 80);
@@ -162,13 +164,14 @@ if ((isset($_GET['src'])) && ((strpos(strtolower($sSource), '.jpg') !== false) |
 				$iDestY = $aSourceDim[1] - $iWatermarkHeight;
 				imagecopymerge($oImage, $oWatermark, $iDestX - 5, $iDestY - 5, 0, 0, $iWatermarkWidth, $iWatermarkHeight, 60);
 				//Serve avif if supported by PHP and client browser
-				if ((imagetypes() & IMG_AVIF) && (isset($_SERVER['HTTP_ACCEPT'])) && (strpos($_SERVER['HTTP_ACCEPT'], 'image/avif') !== false))
+				$sServerHttpAccept = @filter_var($_SERVER['HTTP_ACCEPT'], FILTER_SANITIZE_STRING);
+				if ((imagetypes() & IMG_AVIF) && (isset($sServerHttpAccept)) && (strpos($sServerHttpAccept, 'image/avif') !== false))
 				{
 					header('Content-Type: image/avif');
 					imageavif($oImage, NULL, 85);
 				}
 				//Serve webp if supported by PHP and client browser
-				else if ((imagetypes() & IMG_WEBP) && (isset($_SERVER['HTTP_ACCEPT'])) && (strpos($_SERVER['HTTP_ACCEPT'], 'image/webp') !== false))
+				else if ((imagetypes() & IMG_WEBP) && (isset($sServerHttpAccept)) && (strpos($sServerHttpAccept, 'image/webp') !== false))
 				{
 					header('Content-Type: image/webp');
 					imagepalettetotruecolor($oImage);
