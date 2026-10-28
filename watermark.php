@@ -1,307 +1,221 @@
 <?php
 /**
----------------------------------------------------------------------------------------------------------------------------
-Watermark images for WordPress (.htaccess based) v2.15
- * @author Javier Gutiérrez Chamorro (Guti) - https://www.javiergutierrezchamorro.com
- * @link https://www.javiergutierrezchamorro.com
- * @copyright © Copyright 2021-2022
+ * ---------------------------------------------------------------------------------------------------------------------------
+ * Watermark images for WordPress (.htaccess based) v3.00
+ *
+ * Original script v2.16 by Javier Gutiérrez Chamorro (Guti) - https://www.javiergutierrezchamorro.com
+ * @copyright © Copyright 2021-2026 Javier Gutiérrez Chamorro
  * @package watermark-images-for-wordpress-htaccess
  * @license LGPL
- * @version 2.16
----------------------------------------------------------------------------------------------------------------------------
-*/
+ *
+ * Refactor: bugs fixed, code simplified and optimized.
+ * Requires PHP 8.2+ with the GD extension (WebP/AVIF optional depending on the build).
+ *
+ * Installation: place this file and watermark.png in the images directory
+ * (typically wp-content/uploads) and add the following to the directory .htaccess:
+ *
+ * <IfModule mod_rewrite.c>
+ *     RewriteEngine On
+ *     RewriteCond expr "filesize('%{REQUEST_FILENAME}') -gt 102400"
+ *     RewriteRule (^.*\.(jpg|jpeg|png)$) ./watermark.php?src=$1 [L]
+ * </IfModule>
+ *
+ * Add "nowatermark" to any URL to get the original image unprocessed.
+ * ---------------------------------------------------------------------------------------------------------------------------
+ */
 
+declare(strict_types=1);
 
-// -------------------------------------------------------------------------------------------------------------------------------------------------------------
-/*
-<IfModule mod_rewrite.c>
-	RewriteEngine On
-	RewriteCond expr "filesize('%{REQUEST_FILENAME}') -gt 102400"
-	RewriteRule (^.*\.(jpg|jpeg|png)$) ./watermark.php?src=$1 [L]
-</IfModule>
-*/
+// ---------------------------------------------------------------------------------------------------------------------------
+// Configuration
+// ---------------------------------------------------------------------------------------------------------------------------
 
+const KI_MIN_WIDTH  = 800;                        // Minimum image width (px) to apply the watermark
+const KI_MIN_HEIGHT = 600;                        // Minimum image height (px) to apply the watermark
+const KI_SCALE_MAX  = 1200;                       // Image gets downscaled if its larger side exceeds this value
+const KS_EXCLUDE    = 'nowatermark';              // Substring in the URL that disables processing
+const KS_WATERMARK  = __DIR__ . '/watermark.png'; // PNG image used as the watermark
 
-// -------------------------------------------------------------------------------------------------------------------------------------------------------------
-declare(strict_types = 1);
+const KI_WM_OPACITY = 60;                         // Watermark opacity (0-100)
+const KI_WM_MARGIN  = 5;                          // Watermark margin from the border (px)
 
+const KI_Q_AVIF     = 80;                         // AVIF encoding quality (0-100)
+const KI_Q_WEBP     = 85;                         // WebP encoding quality (0-100)
+const KI_Q_JPEG     = 85;                         // JPEG encoding quality (0-100)
 
-// -------------------------------------------------------------------------------------------------------------------------------------------------------------
-if (!defined('IMG_WEPB'))
+// GD constants missing when PHP is compiled without WebP/AVIF support
+defined('IMG_WEBP') || define('IMG_WEBP', 32);
+defined('IMG_AVIF') || define('IMG_AVIF', 256);
+
+// ---------------------------------------------------------------------------------------------------------------------------
+// Helper functions
+// ---------------------------------------------------------------------------------------------------------------------------
+
+/** Returns a 404 and ends the request. */
+function notFound(): never
 {
-	define('IMG_WEPB', 32);
+	http_response_code(404);
+	exit;
 }
-if (!defined('IMG_AVIF'))
+
+/** Serves the original file as-is, using X-Sendfile if the server supports it. */
+function serveFile(string $sFile, int $iType): never
 {
-	define('IMG_AVIF', 256);
-}
+	header('Content-Type: ' . image_type_to_mime_type($iType));
 
-// -------------------------------------------------------------------------------------------------------------------------------------------------------------
-const KI_MIN_JPEG_WIDTH = 800;					//Minimum JPEG image width in order to be watermarked
-const KI_MIN_JPEG_HEIGHT = 600;					//Minimum JPEG image width in order to be watermarked
-const KI_SCALE_JPEG_WIDTH = 1200;				//JPEG image will be reduced to that width if it is wider
-const KI_MIN_PNG_WIDTH = 800;					//Minimum PNG image width in order to be watermarked
-const KI_MIN_PNG_HEIGHT = 600;					//Minimum JPEG image width in order to be watermarked
-const KI_SCALE_PNG_WIDTH = 1200;				//PNG image will be reduced to that width if it is wider
-const KS_EXCLUDE_PROCESSING = 'nowatermark';	//Substring in URL to exclude processing
-
-
-// -------------------------------------------------------------------------------------------------------------------------------------------------------------
-$sGetSrc = @filter_var($_GET['src'], FILTER_SANITIZE_STRING);
-$sGetRequestUrl = @filter_var($_SERVER['REQUEST_URI'], FILTER_SANITIZE_STRING);
-$sSource = getcwd() . '/' . $sGetSrc;
-
-
-//We only support JPEG AND PNG files
-if ((isset($sGetSrc)) && ((strpos(strtolower($sSource), '.jpg') !== false) || (strpos(strtolower($sSource), '.jpeg') !== false) || (strpos(strtolower($sSource), '.png') !== false)) && (strpos($sGetRequestUrl, KS_EXCLUDE_PROCESSING) === false))
-{
-	//Source image should exist
-	if (file_exists($sSource))
+	if (function_exists('apache_get_modules') && in_array('mod_xsendfile', apache_get_modules(), true))
 	{
-		//JPEG processing
-		if ((strpos(strtolower($sSource), '.jpg') !== false) || (strpos(strtolower($sSource), '.jpeg')))
-		{
-			//PHP getimagesize is slow because it reads the whole image. We will only watermark big images which initially is a faster check
-			$aSourceDim = @getjpegsize($sSource);
-			//If fast getimagesize fails, try to use system version
-			if (!$aSourceDim)
-			{
-				$aSourceDim = @getimagesize($sSource);
-			}
-			//Now we know it is big enough we proceed checking the image dimensions
-			if (($aSourceDim) && (($aSourceDim[0] >= KI_MIN_JPEG_WIDTH) || ($aSourceDim[1] >= KI_MIN_JPEG_HEIGHT)) && ($aSourceDim[2] === IMAGETYPE_JPEG))
-			{
-				$oImage = @imagecreatefromjpeg($sSource);
-				//Rescale if too large
-				if (($aSourceDim[0] > KI_SCALE_JPEG_WIDTH) || ($aSourceDim[1] > KI_SCALE_JPEG_WIDTH))
-				{
-					if ($aSourceDim[0] > $aSourceDim[1])
-					{
-						$aSourceDim[1] = (int)($aSourceDim[1] * (KI_SCALE_JPEG_WIDTH / $aSourceDim[0]));
-						$aSourceDim[0] = KI_SCALE_JPEG_WIDTH;
-					}
-					else
-					{
-						$aSourceDim[0] = (int)($aSourceDim[0] * (KI_SCALE_JPEG_WIDTH / $aSourceDim[1]));
-						$aSourceDim[1] = KI_SCALE_JPEG_WIDTH;
-					}
-					$oScaled = imagescale($oImage, $aSourceDim[0], $aSourceDim[1]);
-					@imagedestroy($oImage);
-					$oImage = $oScaled;
-				}
-				//Watermark the image
-				$oWatermark = imagecreatefrompng('watermark.png');
-				$iWatermarkWidth = imagesx($oWatermark);
-				$iWatermarkHeight = imagesy($oWatermark);
-				$iDestX = $aSourceDim[0] - $iWatermarkWidth;
-				$iDestY = $aSourceDim[1] - $iWatermarkHeight;
-				imagecopymerge($oImage, $oWatermark, $iDestX - 5, $iDestY - 5, 0, 0, $iWatermarkWidth, $iWatermarkHeight, 60);
-				//Serve avif if supported by PHP and client browser
-				if ((imagetypes() & IMG_AVIF) && (isset($sServerHttpAccept)) && (strpos($sServerHttpAccept, 'image/avif') !== false))
-				{
-					header('Content-Type: image/avif');
-					imageavif($oImage, NULL, 70, 9);
-				}
-				//Serve webp if supported by PHP and client browser
-				else if ((imagetypes() & IMG_WEBP) && (isset($sServerHttpAccept)) && (strpos($sServerHttpAccept, 'image/webp') !== false))
-				{
-					header('Content-Type: image/webp');
-					imagewebp($oImage, NULL, 80);
-				}
-				//Fallback to serving interlaced JPEG
-				else
-				{
-					header('Content-Type: image/jpeg');
-					imageinterlace($oImage);
-					imagejpeg($oImage, NULL, 85);
-				}
-				@imagedestroy($oWatermark);
-				@imagedestroy($oImage);
-			}
-			//Less than 1024x768 JPEG so redirect to original file
-			else
-			{
-				ServeFile($sSource);
-			}
-		}
-
-		//PNG processing
-		if (strpos(strtolower($sSource), '.png') !== false)
-		{
-			//PHP getimagesize is slow because it reads the whole image. We will only watermark big images which initially is a faster check
-			$aSourceDim = @getpngsize($sSource);
-			//If fast getimagesize fails, try to use system version
-			if (!$aSourceDim)
-			{
-				$aSourceDim = @getimagesize($sSource);
-			}
-			//Now we know it is big enough we proceed checking the image dimensions
-			if (($aSourceDim) && (($aSourceDim[0] >= KI_MIN_PNG_WIDTH) || ($aSourceDim[1] >= KI_MIN_PNG_HEIGHT)) && ($aSourceDim[2] === IMAGETYPE_PNG))
-			{
-				$oImage = @imagecreatefrompng($sSource);
-				//Rescale if too large
-				if (($aSourceDim[0] > KI_SCALE_PNG_WIDTH) || ($aSourceDim[1] > KI_SCALE_PNG_WIDTH))
-				{
-					if ($aSourceDim[0] > $aSourceDim[1])
-					{
-						$aSourceDim[1] = (int)($aSourceDim[1] * (KI_SCALE_PNG_WIDTH / $aSourceDim[0]));
-						$aSourceDim[0] = KI_SCALE_PNG_WIDTH;
-					}
-					else
-					{
-						$aSourceDim[0] = (int)($aSourceDim[0] * (KI_SCALE_PNG_WIDTH / $aSourceDim[1]));
-						$aSourceDim[1] = KI_SCALE_PNG_WIDTH;
-					}
-					$oScaled = imagescale($oImage, $aSourceDim[0], $aSourceDim[1]);
-					@imagedestroy($oImage);
-					$oImage = $oScaled;
-				}
-				//Watermark the image
-				$oWatermark = imagecreatefrompng('watermark.png');
-				$iWatermarkWidth = imagesx($oWatermark);
-				$iWatermarkHeight = imagesy($oWatermark);
-				$iDestX = $aSourceDim[0] - $iWatermarkWidth;
-				$iDestY = $aSourceDim[1] - $iWatermarkHeight;
-				imagecopymerge($oImage, $oWatermark, $iDestX - 5, $iDestY - 5, 0, 0, $iWatermarkWidth, $iWatermarkHeight, 60);
-				//Serve avif if supported by PHP and client browser
-				$sServerHttpAccept = @filter_var($_SERVER['HTTP_ACCEPT'], FILTER_SANITIZE_STRING);
-				if ((imagetypes() & IMG_AVIF) && (isset($sServerHttpAccept)) && (strpos($sServerHttpAccept, 'image/avif') !== false))
-				{
-					header('Content-Type: image/avif');
-					imageavif($oImage, NULL, 85);
-				}
-				//Serve webp if supported by PHP and client browser
-				else if ((imagetypes() & IMG_WEBP) && (isset($sServerHttpAccept)) && (strpos($sServerHttpAccept, 'image/webp') !== false))
-				{
-					header('Content-Type: image/webp');
-					imagepalettetotruecolor($oImage);
-					imagealphablending($oImage, true);
-					imagesavealpha($oImage, true);
-					imagewebp($oImage, NULL, 85);
-				}
-				//Fallback to serving PNG
-				else
-				{
-					header('Content-Type: image/png');
-					imagepng($oImage, NULL, 9, PNG_ALL_FILTERS);
-				}
-				@imagedestroy($oWatermark);
-				@imagedestroy($oImage);
-			}
-			//Less than 1024x768 PNG so redirect to original file
-			else
-			{
-				ServeFile($sSource, 'png');
-			}
-		}
+		header('X-Sendfile: ' . $sFile);
 	}
-	//Image not found
 	else
 	{
-		header('HTTP/1.1 404 Not Found');
+		$iSize = @filesize($sFile);
+		if ($iSize !== false && $iSize > 0)
+		{
+			header('Content-Length: ' . $iSize);
+		}
+		readfile($sFile);
+	}
+	exit;
+}
+
+// ---------------------------------------------------------------------------------------------------------------------------
+// Main program
+// ---------------------------------------------------------------------------------------------------------------------------
+
+// 1) The src parameter is mandatory: non-empty string without null bytes
+$sSrc = $_GET['src'] ?? '';
+if (!is_string($sSrc) || $sSrc === '' || str_contains($sSrc, "\0"))
+{
+	notFound();
+}
+
+// 2) Only jpg / jpeg / png extensions are allowed
+if (!in_array(strtolower(pathinfo($sSrc, PATHINFO_EXTENSION)), ['jpg', 'jpeg', 'png'], true))
+{
+	notFound();
+}
+
+// 3) Canonical path: the file must stay INSIDE the script directory
+//    (closes the path traversal: src=../../../etc/secret.png)
+$sBase   = (string)realpath(__DIR__);
+$sSource = realpath($sBase . DIRECTORY_SEPARATOR . $sSrc);
+if ($sSource === false || !str_starts_with($sSource, $sBase . DIRECTORY_SEPARATOR) || !is_file($sSource))
+{
+	notFound();
+}
+
+// 4) Dimensions and real type of the file
+//    (getimagesize only reads the file headers: it does not decode pixels)
+$aInfo = @getimagesize($sSource);
+if ($aInfo === false)
+{
+	notFound();
+}
+$iW    = (int)$aInfo[0];
+$iH    = (int)$aInfo[1];
+$iType = (int)$aInfo[2];
+
+// 5) The original file is served unprocessed when the URL excludes it, the image
+//    is smaller than the configured minimum, or its real content is not JPEG/PNG
+if (
+	str_contains($_SERVER['REQUEST_URI'] ?? '', KS_EXCLUDE)
+	|| ($iW < KI_MIN_WIDTH && $iH < KI_MIN_HEIGHT)
+	|| !in_array($iType, [IMAGETYPE_JPEG, IMAGETYPE_PNG], true)
+)
+{
+	serveFile($sSource, $iType);
+}
+
+// 6) Image is loaded into GD
+$oImage = match ($iType)
+{
+	IMAGETYPE_JPEG => @imagecreatefromjpeg($sSource),
+	default        => @imagecreatefrompng($sSource),
+};
+if ($oImage === false)
+{
+	notFound(); // Corrupted file or not readable by GD
+}
+
+// 7) Indexed (palette) PNGs are converted to truecolor, required for WebP/AVIF
+//    encoding and for a correct merge
+if ($iType === IMAGETYPE_PNG)
+{
+	imagepalettetotruecolor($oImage);
+}
+
+// 8) Proportional downscale when the larger side exceeds the maximum
+if (max($iW, $iH) > KI_SCALE_MAX)
+{
+	$fRatio  = KI_SCALE_MAX / max($iW, $iH);
+	$iNewW   = max(1, (int)round($iW * $fRatio));
+	$iNewH   = max(1, (int)round($iH * $fRatio));
+	$oScaled = imagescale($oImage, $iNewW, $iNewH);
+
+	if ($oScaled !== false)
+	{
+		imagedestroy($oImage);
+		[$oImage, $iW, $iH] = [$oScaled, $iNewW, $iNewH];
 	}
 }
-//Not a JPEG, or no image specified  so serve the original image
+
+// 9) Watermark merge in the bottom right corner
+//    (if watermark.png is missing, the image is still served without the mark)
+$oWatermark = @imagecreatefrompng(KS_WATERMARK);
+if ($oWatermark !== false)
+{
+	$iWmW = imagesx($oWatermark);
+	$iWmH = imagesy($oWatermark);
+
+	imagecopymerge(
+		$oImage,
+		$oWatermark,
+		max(0, $iW - $iWmW - KI_WM_MARGIN),
+		max(0, $iH - $iWmH - KI_WM_MARGIN),
+		0,
+		0,
+		$iWmW,
+		$iWmH,
+		KI_WM_OPACITY
+	);
+	imagedestroy($oWatermark);
+}
+
+// 10) Delivery with content negotiation: AVIF > WebP > original format
+$sAccept = $_SERVER['HTTP_ACCEPT'] ?? '';
+
+// Vary: Accept prevents caches/CDNs from storing the AVIF/WebP version and
+// serving it later to browsers that do not support it (cache bug in the original script)
+header('Vary: Accept');
+
+$bAvif = str_contains($sAccept, 'image/avif') && function_exists('imageavif') && (imagetypes() & IMG_AVIF);
+$bWebp = str_contains($sAccept, 'image/webp') && function_exists('imagewebp') && (imagetypes() & IMG_WEBP);
+
+if ($bAvif)
+{
+	header('Content-Type: image/avif');
+	imageavif($oImage, null, KI_Q_AVIF, 9);
+}
+elseif ($bWebp)
+{
+	header('Content-Type: image/webp');
+	imagealphablending($oImage, true);
+	imagesavealpha($oImage, true);
+	imagewebp($oImage, null, KI_Q_WEBP);
+}
+elseif ($iType === IMAGETYPE_JPEG)
+{
+	header('Content-Type: image/jpeg');
+	imageinterlace($oImage, true);
+	imagejpeg($oImage, null, KI_Q_JPEG);
+}
 else
 {
-	ServeFile($sSource);
+	header('Content-Type: image/png');
+	imagesavealpha($oImage, true);
+	imagepng($oImage, null, 6);
 }
 
-
-// -------------------------------------------------------------------------------------------------------------------------------------------------------------
-function ServeFile($psFile, $psType = 'jpeg')
-{
-	header('Content-Type: image/' . $psType);
-	header('Content-Length: ' . @filesize($psFile));
-	
-	//Use faster X-Sendfile if available
-	if ((function_exists('apache_get_modules')) && (in_array('mod_xsendfile', apache_get_modules())))
-	{
-		header('X-Sendfile: ' . $psFile);
-	}
-	else
-	{
-		@readfile($psFile);
-	}
-}
-
-
-// -------------------------------------------------------------------------------------------------------------------------------------------------------------
-//Retrieve JPEG width and height without downloading/reading entire image.
-//https://www.php.net/manual/en/function.getimagesize.php#88793
-function getjpegsize($img_loc)
-{
-	$handle = fopen($img_loc, 'rb') or die('Invalid file stream.');
-	if (!feof($handle))
-	{
-		$new_block = fread($handle, 32);
-		$i = 0;
-		if ($new_block[$i] === "\xFF" && $new_block[$i + 1] === "\xD8" && $new_block[$i + 2] === "\xFF" && $new_block[$i + 3] === "\xE0")
-		{
-			$i += 4;
-			if ($new_block[$i + 2] === "\x4A" && $new_block[$i + 3] === "\x46" && $new_block[$i + 4] === "\x49" && $new_block[$i + 5] === "\x46" && $new_block[$i + 6] === "\x00")
-			{
-				// Read block size and skip ahead to begin cycling through blocks in search of SOF marker
-				$block_size = unpack('H*', $new_block[$i] . $new_block[$i + 1]);
-				$block_size = hexdec($block_size[1]);
-				while (!feof($handle))
-				{
-					$i += $block_size;
-					$new_block .= fread($handle, $block_size);
-					if ($new_block[$i] === "\xFF")
-					{
-						// New block detected, check for SOF marker
-						$sof_marker = array("\xC0", "\xC1", "\xC2", "\xC3", "\xC5", "\xC6", "\xC7", "\xC8", "\xC9", "\xCA", "\xCB", "\xCD", "\xCE", "\xCF");
-						if (in_array($new_block[$i + 1], $sof_marker))
-						{
-							// SOF marker detected. Width and height information is contained in bytes 4-7 after this byte.
-							$size_data = $new_block[$i + 2] . $new_block[$i + 3] . $new_block[$i + 4] . $new_block[$i + 5] . $new_block[$i + 6] . $new_block[$i + 7] . $new_block[$i + 8];
-							$unpacked = unpack('H*', $size_data);
-							$unpacked = $unpacked[1];
-							$height = hexdec($unpacked[6] . $unpacked[7] . $unpacked[8] . $unpacked[9]);
-							$width = hexdec($unpacked[10] . $unpacked[11] . $unpacked[12] . $unpacked[13]);
-							return(array($width, $height, IMAGETYPE_JPEG));
-						}
-						else
-						{
-							// Skip block marker and read block size
-							$i += 2;
-							$block_size = unpack('H*', $new_block[$i] . $new_block[$i + 1]);
-							$block_size = hexdec($block_size[1]);
-						}
-					}
-					else
-					{
-						return FALSE;
-					}
-				}
-			}
-		}
-	}
-	return FALSE;
-}
-
-
-// -------------------------------------------------------------------------------------------------------------------------------------------------------------
-//Retrieve PNG width and height without downloading/reading entire image.
-//https://www.php.net/manual/en/function.getimagesize.php
-function getpngsize($img_loc)
-{
-	$handle = fopen($img_loc, 'rb') or die('Invalid file stream.');
-	if (!feof( $handle))
-	{
-		$new_block = fread($handle, 24);
-		if (strncmp($new_block, "\x89\x50\x4E\x47\x0D\x0A\x1A\x0A", 8) === 0)
-		{
-			if ($new_block[12] . $new_block[13] . $new_block[14] . $new_block[15] === "\x49\x48\x44\x52")
-			{
-				$width  = unpack('H*', $new_block[16] . $new_block[17] . $new_block[18] . $new_block[19]);
-				$width  = hexdec($width[1]);
-				$height = unpack('H*', $new_block[20] . $new_block[21] . $new_block[22] . $new_block[23]);
-				$height  = hexdec($height[1]);
-				return(array($width, $height, IMAGETYPE_PNG));
-			}
-		}
-	}
-	return FALSE;
-}
+imagedestroy($oImage);
+exit;
